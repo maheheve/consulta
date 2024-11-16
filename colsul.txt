@@ -1,0 +1,378 @@
+SELECT idProgramacion, dni, personal, FECHA_PROG,     TIPO_TURNO,     INGRESO,SALIDA, DETALLE_INGRESO,
+CASE WHEN DATEDIFF(MINUTE, '00:00:00', CAST(DETALLE_INGRESO_N AS TIME)) > NH_MIN THEN FORMAT(CAST(CONVERT(varchar, DATEADD(minute,NH_MIN, 0), 108) AS datetime),'HH:mm:ss') ELSE DETALLE_INGRESO_N END AS DETALLE_INGRESO_N,
+CASE WHEN DATEDIFF(MINUTE, '00:00:00', CAST(DETALLE_SALIDA_N AS TIME)) > NH_MIN THEN FORMAT(CAST(CONVERT(varchar, DATEADD(minute,NH_MIN, 0), 108) AS datetime),'HH:mm:ss') ELSE DETALLE_SALIDA_N END AS DETALLE_SALIDA_N,
+CASE
+WHEN NH_MIN <= CAST(DATEDIFF(MINUTE, '00:00:00', (CASE WHEN DATEDIFF(MINUTE, '00:00:00', CAST(DETALLE_INGRESO_N AS TIME)) > NH_MIN THEN FORMAT(CAST(CONVERT(varchar, DATEADD(minute,NH_MIN, 0), 108) AS datetime),'HH:mm:ss') ELSE DETALLE_INGRESO_N END)) AS INT)
+OR NH_MIN <= CAST(DATEDIFF(MINUTE, '00:00:00', (CASE WHEN DATEDIFF(MINUTE, '00:00:00', CAST(DETALLE_SALIDA_N AS TIME)) > NH_MIN THEN FORMAT(CAST(CONVERT(varchar, DATEADD(minute,NH_MIN, 0), 108) AS datetime),'HH:mm:ss') ELSE DETALLE_SALIDA_N END)) AS INT)
+THEN '00:00:00'
+ELSE HORAS_TRABAJADAS
+END AS HORAS_TRABAJADAS,
+JUTIFICAR, CANT_JUSTIFICADOS,
+CASE
+WHEN NH_MIN <= CAST(DATEDIFF(MINUTE, '00:00:00', (CASE WHEN DATEDIFF(MINUTE, '00:00:00', CAST(DETALLE_INGRESO_N AS TIME)) > NH_MIN THEN FORMAT(CAST(CONVERT(varchar, DATEADD(minute,NH_MIN, 0), 108) AS datetime),'HH:mm:ss') ELSE DETALLE_INGRESO_N END)) AS INT)
+OR NH_MIN <= CAST(DATEDIFF(MINUTE, '00:00:00', (CASE WHEN DATEDIFF(MINUTE, '00:00:00', CAST(DETALLE_SALIDA_N AS TIME)) > NH_MIN THEN FORMAT(CAST(CONVERT(varchar, DATEADD(minute,NH_MIN, 0), 108) AS datetime),'HH:mm:ss') ELSE DETALLE_SALIDA_N END)) AS INT)
+THEN
+NH_MIN
+ELSE TOTAL_DESCUENTO
+END AS TOTAL_DESCUENTO, idTipoTurno, idTurno, COUNT(*) OVER() AS total,
+CASE WHEN descontado IS NULL OR descontado < 0 OR descontado = '' THEN 0 ELSE descontado END AS descontado
+/*agregó vladik*/
+,case when aq is Null then '-' else aq end as aq,
+case when area is Null then '-' else area end as area,
+case when sarea is Null then '-' else sarea end as sarea
+FROM
+(SELECT A.idProgramacion, A.dni, A.personal,FORMAT(CAST(A.fechapro AS datetime),'dd/MM/yyyy') AS FECHA_PROG, A.tipoturno AS TIPO_TURNO, A.idTipoTurno, A.idTurno, F.descontado,
+CASE
+/*INGRESE 01*/
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 THEN FORMAT(CAST(D.fechaHorainiciojustificacion AS datetime),'dd/MM/yyyy HH:mm:ss')
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 'MISIÓN DE SERVICIO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 'LICENCIA POR ENFERMEDAD'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 'DIA LIBRE POR HORAS EXTRAS'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 'POR FAMILIAR FALLECIDO'                    WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 'HORA DE LACTANCIA'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 'FERIADO COMPENSABLE'                    WHEN a.idDetalleTurno = 3 THEN 'TRABAJO REMOTO'
+WHEN A.idTurno = 46 THEN A.tipoturno
+/*FIN INGRESO 01*/
+WHEN A.idTipoTurno IN (2,3) THEN A.tipoturno
+WHEN B.CHECKTIME_MIN IS NOT NULL AND D.idTipoJustificacion = 1 THEN FORMAT(CAST(D.fechaHorainiciojustificacion AS datetime),'dd/MM/yyyy HH:mm:ss')
+WHEN B.CHECKTIME_MIN IS NULL AND D.idTipoJustificacion IS NULL THEN 'NO MARCO ENTRADA'
+ELSE FORMAT(CAST(B.CHECKTIME_MIN AS datetime),'dd/MM/yyyy HH:mm:ss')
+END AS 'INGRESO',
+CASE
+/*INGRESE 02*/
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 'MISIÓN DE SERVICIO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 'LICENCIA POR ENFERMEDAD'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 'DIA LIBRE POR HORAS EXTRAS'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 'POR FAMILIAR FALLECIDO'                    WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 'HORA DE LACTANCIA'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 'FERIADO COMPENSABLE'                    WHEN a.idDetalleTurno = 3 THEN 'TRABAJO REMOTO'
+WHEN A.idTurno = 46 THEN A.tipoturno
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 THEN FORMAT(CAST(E.fechaHorasalidajustificacion AS datetime),'dd/MM/yyyy HH:mm:ss')
+/*INGRESE 02 FIN*/
+WHEN A.idTipoTurno IN (2,3) THEN A.tipoturno
+WHEN A.idTipoTurno = 0 THEN
+CASE
+WHEN B.CHECKTIME_MAX IS NOT NULL AND E.idTipoJustificacion = 2 THEN FORMAT(CAST(E.fechaHorasalidajustificacion AS datetime),'dd/MM/yyyy HH:mm:ss')
+WHEN (B.CHECKTIME_MAX IS NULL AND E.idTipoJustificacion IS NULL) THEN 'NO MARCO SALIDA'
+ELSE FORMAT(CAST(B.CHECKTIME_MAX AS datetime),'dd/MM/yyyy HH:mm:ss') END
+WHEN A.idTipoTurno = 1 THEN
+CASE
+WHEN C.CHECKTIME_SALIDA_GNOCHE IS NOT NULL AND E.idTipoJustificacion = 2 THEN FORMAT(CAST(E.fechaHorasalidajustificacion AS datetime),'dd/MM/yyyy HH:mm:ss')
+WHEN C.CHECKTIME_SALIDA_GNOCHE IS NULL AND E.idTipoJustificacion IS NULL THEN 'NO MARCO SALIDA'
+ELSE FORMAT(CAST(C.CHECKTIME_SALIDA_GNOCHE AS datetime),'dd/MM/yyyy HH:mm:ss') END
+END AS 'SALIDA',
+---INICIO--TARDANZA
+(CASE
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) <= 5 THEN 'PUNTUAL JUSTIFICADO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 6 AND 10 THEN '10 MIN JUSTIFICADO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 11 AND 20 THEN '20 MIN JUSTIFICADO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 21 AND 30 THEN '30 MIN JUSTIFICADO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) > 30 THEN 'FALTO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 'MISIÓN DE SERVICIO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 'LICENCIA POR ENFERMEDAD'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 'DIA LIBRE POR HORAS EXTRAS'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 'POR FAMILIAR FALLECIDO'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 'HORA DE LACTANCIA'
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 'FERIADO COMPENSABLE'
+WHEN a.idDetalleTurno = 3 THEN 'TRABAJO REMOTO'
+WHEN A.idTurno = 46 THEN A.tipoturno
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) <= 5 THEN 'PUNTUAL DIURNO'
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 6 AND 10 THEN '10 MIN DIURNO'
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 11 AND 20 THEN '20 MIN DIURNO'
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 21 AND 30 THEN '30 MIN DIURNO'
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) > 30 THEN 'FALTO DIURNO'
+--TURNO 1 SE RESTA HORA PROGRAMADA MENOS HORA ENTRADA
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) <= 5 THEN 'PUNTUAL NOCHE'
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 6 AND 10 THEN '10 MIN NOCHE'
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 11 AND 20 THEN '20 MIN NOCHE'
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 21 AND 30 THEN '30 MIN NOCHE'
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) > 30 THEN 'FALTO NOCHE'
+WHEN idTipoTurno IN (0,1) AND (A.fechahorainicio IS NULL OR B.CHECKTIME_MIN IS NULL) THEN 'NO MARCO ENTRADA'
+ELSE A.tipoturno END) AS DETALLE_INGRESO,
+---FIN--TARDANZA DES. RETRASO
+---INICIO--TARDANZA EN NUMEROS
+FORMAT(CAST(CONVERT(varchar, DATEADD(minute,
+(CASE
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) <= 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 6 AND 10 THEN 10
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 11 AND 20 THEN 20
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 21 AND 30 THEN 30
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) > 30 THEN CAST(A.nh AS FLOAT) * 60
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) <= 5 THEN 0
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 6 AND 10 THEN 10
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 11 AND 20 THEN 20
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 21 AND 30 THEN 30
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) > 30 THEN CAST(A.nh AS FLOAT) * 60
+WHEN idTipoTurno IN (0,1) AND (A.fechahorainicio IS NULL OR B.CHECKTIME_MIN IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END), 0), 108) AS datetime),'HH:mm:ss') AS DETALLE_INGRESO_N,
+---FIN--TARDANZA EN NUMEROS RETRASO
+--MAH MHHV
+FORMAT(CAST(CONVERT(varchar, DATEADD(minute,
+(CASE
+/*INGRESE 02*/
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) > 0
+THEN DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin)
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) <= 0
+THEN 0
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion IN (3,4,5,6,7,1002) THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin)
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin)
+WHEN idTipoTurno IN (0) AND (A.fechahorafin IS NULL OR B.CHECKTIME_MAX IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+WHEN idTipoTurno IN (1) AND (A.fechahorafin IS NULL OR C.CHECKTIME_SALIDA_GNOCHE IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END)
+, 0), 108) AS datetime),'HH:mm:ss') AS DETALLE_SALIDA_N,
+--MAH MHHV FIN
+--HORAS TRABAJADAS MHHV
+FORMAT(CAST(CONVERT(varchar, DATEADD(minute,
+CAST(A.nh AS FLOAT) * 60 -
+--TARDANZA EN NUMEROS
+((CASE
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) <= 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 6 AND 10 THEN 10
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 11 AND 20 THEN 20
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 21 AND 30 THEN 30
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) > 30 THEN CAST(A.nh AS FLOAT) * 60
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) <= 5 THEN 0
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 6 AND 10 THEN 10
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 11 AND 20 THEN 20
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 21 AND 30 THEN 30
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) > 30 THEN CAST(A.nh AS FLOAT) * 60
+WHEN idTipoTurno IN (0,1) AND (A.fechahorainicio IS NULL OR B.CHECKTIME_MIN IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END)
++
+--MAH
+(CASE
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) > 0 THEN
+DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin)
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) <= 0 THEN 0
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion IN (3,4,5,6,7,1002) THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin)
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin)
+WHEN idTipoTurno IN (0) AND (A.fechahorafin IS NULL OR B.CHECKTIME_MAX IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+WHEN idTipoTurno IN (1) AND (A.fechahorafin IS NULL OR C.CHECKTIME_SALIDA_GNOCHE IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END))
+--MAH FIN
+, 0), 108) AS datetime),'HH:mm:ss') AS HORAS_TRABAJADAS
+--HORAS TRABAJADAS MHHV FIN
+--TARDANZA EN NUMEROS
+,CASE WHEN
+((CASE
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) <= 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 6 AND 10 THEN 10
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 11 AND 20 THEN 20
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 21 AND 30 THEN 30
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) > 30 THEN CAST(A.nh AS FLOAT) * 60
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) <= 5 THEN 0
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 6 AND 10 THEN 10
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 11 AND 20 THEN 20
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 21 AND 30 THEN 30
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) > 30 THEN CAST(A.nh AS FLOAT) * 60
+
+WHEN idTipoTurno IN (0,1) AND (A.fechahorainicio IS NULL OR B.CHECKTIME_MIN IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END)
+--TARDANZA EN NUMEROSFIN
++
+--MAH
+(CASE
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) > 0
+THEN DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin)
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) <= 0
+THEN 0
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion IN (3,4,5,6,7,1002) THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin)
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin)
+WHEN idTipoTurno IN (0) AND (A.fechahorafin IS NULL OR B.CHECKTIME_MAX IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+WHEN idTipoTurno IN (1) AND (A.fechahorafin IS NULL OR C.CHECKTIME_SALIDA_GNOCHE IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END)) > 0 THEN 1 ELSE 0 END AS JUTIFICAR,
+--JUSTIFICAR MHHV FIN
+--CANTIDAD DE JUSTIFICADAS
+CASE WHEN D.cantJust > 0 OR E.cantJust > 0 THEN 1 ELSE 0 END AS CANT_JUSTIFICADOS,
+--CANTIDAD DE JUSTIFICADAS FIN
+CAST(
+((CASE
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) <= 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 6 AND 10 THEN 10
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 11 AND 20 THEN 20
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) BETWEEN 21 AND 30 THEN 30
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1 AND DATEDIFF(MINUTE, A.fechahorainicio, D.fechaHorainiciojustificacion) > 30 THEN CAST(A.nh AS FLOAT) * 60
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) <= 5 THEN 0
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 6 AND 10 THEN 10
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 11 AND 20 THEN 20
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) BETWEEN 21 AND 30 THEN 30
+WHEN idTipoTurno IN (0,1) AND DATEDIFF(MINUTE, A.fechahorainicio, B.CHECKTIME_MIN) > 30 THEN CAST(A.nh AS FLOAT) * 60
+WHEN idTipoTurno IN (0,1) AND (A.fechahorainicio IS NULL OR B.CHECKTIME_MIN IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END)
+--TARDANZA EN NUMEROSFIN
++
+--MAH
+(CASE
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 3 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 4 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 5 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 6 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 7 THEN 0
+WHEN a.idProgramacion = D.idProgramacion AND D.idTipoJustificacion = 1002 THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) > 0
+THEN DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin)
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion = 2 AND DATEDIFF(MINUTE, E.fechaHorasalidajustificacion, A.fechahorafin) <= 0
+THEN 0
+WHEN a.idProgramacion = E.idProgramacion AND E.idTipoJustificacion IN (3,4,5,6,7,1002) THEN 0
+WHEN a.idDetalleTurno = 3 THEN 0
+WHEN A.idTurno = 46 THEN 0
+--TURNO 0 SE RESTA HORA ENTRADA MENOS HORA PROGRAMADA
+WHEN idTipoTurno IN (0) AND DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, B.CHECKTIME_MAX, A.fechahorafin)
+WHEN idTipoTurno IN (1) AND DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin) > 0 THEN DATEDIFF(MINUTE, C.CHECKTIME_SALIDA_GNOCHE, A.fechahorafin)
+WHEN idTipoTurno IN (0) AND (A.fechahorafin IS NULL OR B.CHECKTIME_MAX IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+WHEN idTipoTurno IN (1) AND (A.fechahorafin IS NULL OR C.CHECKTIME_SALIDA_GNOCHE IS NULL) THEN CAST(A.nh AS FLOAT) * 60
+ELSE 0 END)) AS INT) AS TOTAL_DESCUENTO
+,CAST(A.nh AS FLOAT) * 60 AS NH_MIN
+/*agregó vladik*/
+,a.unse as aq, a.area, a.sarea
+/*agregó vladik*/
+FROM
+(SELECT DISTINCT pr.idProgramacion, CONCAT(pe.apePaterno,' ',pe.apeMaterno,' ',pe.priNombre,' ',pe.segNombre) AS personal,
+pe.idPersonal AS dni, u.idpersonal, pr.fecha AS fechapro, t.descripcion AS tipoturno,
+pr.idDetalleTurno AS idDetalleTurno,
+pr.idTurno, t.nh, t.tipoturno AS idTipoTurno,
+FORMAT(CONVERT(datetime2, CONCAT(pr.fecha,' ',t.horainicio), 120),'yyyy-MM-dd HH:mm:ss') fechahorainicio,
+CASE
+WHEN t.tipoturno = 0 THEN FORMAT(CONVERT(datetime2, CONCAT(pr.fecha,' ',t.horafin), 120),'yyyy-MM-dd HH:mm:ss')
+WHEN t.tipoturno = 1 THEN FORMAT(DATEADD(DAY, 1, CONVERT(datetime2, CONCAT(pr.fecha,' ',t.horafin), 120)), 'yyyy-MM-dd HH:mm:ss')
+END AS fechahorafin
+/*agregó vladik*/
+,us.descripcion as unse, ar.descripcion as area, sa.descripcion as sarea
+/*agregó vladik*/
+FROM SIHOM.personal.programacion AS pr
+INNER JOIN SIHOM.personal.personal as pe on pe.idPersonal=pr.idPersonal
+INNER JOIN SIHOM.personal.personalcargo AS c ON pe.idPersonal = c.idPersonal AND C.estadocargo = 1
+INNER JOIN SIHOM.maestro.turnos AS t ON pr.idTurno = t.idTurno
+INNER JOIN SIHOM.Attendance.checkinout AS u ON CAST(pr.idPersonal AS INT) = CAST(u.idpersonal AS INT)
+/*agregó vladik*/
+LEFT JOIN SIHOM.maestro.unidadoservicio as us ON c.idunidadoservicio = us.idUnidadOservicio
+LEFT JOIN SIHOM.maestro.area as ar ON c.idarea = ar.idArea
+LEFT JOIN SIHOM.maestro.subarea as sa ON c.idsubarea = sa.idSubArea
+/*agregó vladik*/
+where fecha BETWEEN '2024-11-01' and '2024-11-14' and pe.estadopersonal='1'  ) AS A
+INNER JOIN
+(SELECT *
+FROM (
+SELECT
+C.idPersonal,
+C.idcondicionlaboral,
+ROW_NUMBER() OVER (PARTITION BY C.idPersonal ORDER BY C.fechaInicio DESC) AS rn
+FROM SIHOM.personal.personalcontrato AS C
+) AS SubQuery
+WHERE rn = 1
+AND idcondicionlaboral IN (1,2,3,4,5,6,7,8,9,11,14,15,17,18,19,20,21,22,23,24,25,26,27)) AS XX ON A.idpersonal = XX.idPersonal
+LEFT JOIN
+(
+SELECT
+ch.idpersonal,
+CAST(ch.CHECKTIME AS DATE) AS DATECHECKTIME,
+FORMAT(CONVERT(datetime2, MIN(ch.CHECKTIME), 120),'yyyy-MM-dd HH:mm:ss') AS CHECKTIME_MIN,
+FORMAT(CONVERT(datetime2, MAX(ch.CHECKTIME), 120),'yyyy-MM-dd HH:mm:ss') AS CHECKTIME_MAX
+FROM SIHOM.Attendance.checkinout AS ch
+WHERE CAST(ch.CHECKTIME AS DATE) BETWEEN '2024-11-01' AND '2024-11-14'
+GROUP BY ch.idpersonal, CAST(ch.CHECKTIME AS DATE)
+) AS B
+ON A.idpersonal = B.idpersonal AND A.fechapro = B.DATECHECKTIME
+LEFT JOIN
+(
+SELECT
+ch.idpersonal,
+CAST(ch.CHECKTIME AS DATE) AS DATECHECKTIME,
+FORMAT(CONVERT(datetime2, MIN(ch.CHECKTIME), 120),'yyyy-MM-dd HH:mm:ss') AS CHECKTIME_SALIDA_GNOCHE
+FROM SIHOM.Attendance.checkinout AS ch
+WHERE CAST(ch.CHECKTIME AS DATE) BETWEEN DATEADD(DAY, 1,'2024-11-01') AND DATEADD(DAY, 1,'2024-11-14')
+GROUP BY ch.idpersonal, CAST(ch.CHECKTIME AS DATE)
+) AS C
+ON A.idpersonal = C.idpersonal AND DATEADD(DAY, 1,A.fechapro) = C.DATECHECKTIME
+LEFT JOIN
+(
+SELECT j.idProgramacion,
+FORMAT(CONVERT(datetime2, j.fechaHora, 120),'yyyy-MM-dd HH:mm:ss') AS fechaHorainiciojustificacion,
+j.idTipoJustificacion, count(*) AS cantJust
+FROM SIHOM.personal.justificacionprogramacion AS j
+WHERE j.estado = 1 AND j.idTipoJustificacion <> 2 AND (CAST(j.fechaHora AS DATE) BETWEEN '2024-11-01' AND DATEADD(DAY, 1,'2024-11-14'))
+GROUP BY j.idProgramacion, j.fechaHora, j.idTipoJustificacion
+) AS D
+ON A.idProgramacion = D.idProgramacion
+LEFT JOIN
+(
+SELECT j.idProgramacion,
+FORMAT(CONVERT(datetime2, j.fechaHora, 120),'yyyy-MM-dd HH:mm:ss') AS fechaHorasalidajustificacion,
+j.idTipoJustificacion, count(*) AS cantJust
+FROM SIHOM.personal.justificacionprogramacion AS j
+WHERE j.estado = 1 AND j.idTipoJustificacion = 2 AND (CAST(j.fechaHora AS DATE) BETWEEN '2024-11-01' AND DATEADD(DAY, 1,'2024-11-14'))
+GROUP BY j.idProgramacion, j.fechaHora, j.idTipoJustificacion
+)AS E
+ON A.idProgramacion = E.idProgramacion
+/*agregado 022*/
+LEFT JOIN
+(SELECT j.idProgramacion, count(*) AS descontado
+FROM SIHOM.personal.descuentoprogramacion AS j
+INNER JOIN SIHOM.personal.programacion AS A ON J.idProgramacion = A.idProgramacion
+WHERE A.fecha BETWEEN '2024-11-01' and DATEADD(DAY, 1,'2024-11-14')
+GROUP BY j.idProgramacion) AS F
+ON A.idProgramacion = F.idProgramacion
+/*agregado 022 fin*/
+) AS AA
+GROUP BY idProgramacion, dni, personal,   FECHA_PROG,     TIPO_TURNO,     INGRESO,SALIDA, DETALLE_INGRESO,
+DETALLE_INGRESO_N,DETALLE_SALIDA_N,HORAS_TRABAJADAS,JUTIFICAR,CANT_JUSTIFICADOS,TOTAL_DESCUENTO, idTipoTurno, idTurno, NH_MIN, descontado
+/*agregó vladik*/
+,aq, area, sarea
+/*agregó vladik*/
+HAVING TOTAL_DESCUENTO > 0
+ORDER BY DNI, CONVERT(DATE, FECHA_PROG, 103)
